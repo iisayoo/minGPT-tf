@@ -62,7 +62,7 @@ class CosineSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
             .5 * (1.0 + tf.math.cos(math.pi * progress))
         )
 
-        return tf.cond(less_than, lambda: lr_mult_warmup,
+        return tf.cond(less_than, lambda: self.learning_rate * lr_mult_warmup,
                        lambda: self.learning_rate * lr_mult)
 
 
