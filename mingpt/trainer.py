@@ -89,10 +89,10 @@ class Trainer:
             beta_2=self.config.betas[1],
             clipnorm=self.config.grad_norm_clip)
 
-        model.compile(optimizer, 'sparse_categorical_crossentropy')
+        self.model.compile(optimizer, 'sparse_categorical_crossentropy')
 
         use_multiprocessing = True if self.config.num_workers > 1 else False
-        model.fit(self.train_dataset, epochs=self.config.max_epochs,
+        self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
                   validation_data=self.test_dataset,
                   workers=self.config.num_workers,
                   use_multiprocessing=use_multiprocessing)
