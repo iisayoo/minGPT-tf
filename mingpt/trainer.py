@@ -71,7 +71,7 @@ class Trainer:
         self.config = config
 
     def train(self):
-        if.self.config.lr_decay:
+        if self.config.lr_decay:
             learning_rate = CosineSchedule(
                 self.config.learning_rate,
                 self.config.warmup_steps,
