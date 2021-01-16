@@ -4,6 +4,9 @@ network, so nothing in this file really has anything to do with GPT
 specifically.
 """
 
+import logging
+
+import tensorflow as tf
 
 logger = logging.getLogger(__name__)
 
