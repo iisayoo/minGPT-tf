@@ -151,7 +151,7 @@ class GPT(tf.keras.Model):
 
         # each position maps to a (learnable) vector
         if training:
-            position = block_size
+            position = self.block_size
         else:
             position = tf.shape(token_embeddings)[1]
         position_embeddings = self.pos_emb[:, :position, :]
