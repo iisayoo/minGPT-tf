@@ -135,7 +135,7 @@ class GPT(tf.keras.Model):
         self.drop = tf.keras.layers.Dropout(config.embd_pdrop)
 
         # transformer
-        self.blocks = [Block() for _ in range(config.n_layer)]
+        self.blocks = [Block(config) for _ in range(config.n_layer)]
 
         # decoder head
         self.ln_f = tf.keras.layers.LayerNormalization()
