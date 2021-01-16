@@ -143,6 +143,9 @@ class GPT(tf.keras.Model):
 
         self.block_size = config.block_size
 
+    def get_block_size(self):
+        return self.block_size
+
     def call(self, idx, training=False):
         """forward the GPT model"""
 

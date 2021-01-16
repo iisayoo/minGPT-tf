@@ -18,6 +18,14 @@ def top_k_logits(logits, k):
 
 
 def sample(model, x, steps, temperature=1.0, sample=False, top_k=None):
+    """
+    take a conditioning sequence of indices in x (of shape (b,t)) and predict the next token in
+    the sequence, feeding the predictions back into the model each time. Clearly the sampling
+    has quadratic complexity unlike an RNN that is only linear, and has a finite context window
+    of block_size, unlike an RNN that has an infinite context window.
+    """
+
+    block_size = model.get_block_size()
     for k in range(steps):
         # crop context if needed
         x_cond = x if x.shape[1] <= block_size else x[:, -block_size:]
