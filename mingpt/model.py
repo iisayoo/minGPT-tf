@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class GPTConfig:
-     """ base GPT config, params common to all GPT versions """
+    """ base GPT config, params common to all GPT versions """
     embd_pdrop = 0.1
     resid_pdrop = 0.1
     attn_pdrop = 0.1
@@ -125,45 +125,45 @@ class Block(tf.keras.layers.Layer):
 class GPT(tf.keras.Model):
     """  the full GPT language model, with a context size of block_size """
 
-  def __init__(self, config):
-    super(GPT, self).__init__()
+    def __init__(self, config):
+        super(GPT, self).__init__()
 
-    # input embedding stem
-    self.tok_emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
-    self.pos_emb = tf.Variable(tf.zeros([1, config.block_size, config.n_embd]),
-                               trainable=True)
-    self.drop = tf.keras.layers.Dropout(config.embd_pdrop)
+        # input embedding stem
+        self.tok_emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
+        self.pos_emb = tf.Variable(tf.zeros([1, config.block_size, config.n_embd]),
+                                   trainable=True)
+        self.drop = tf.keras.layers.Dropout(config.embd_pdrop)
 
-    # transformer
-    self.blocks = [Block() for _ in range(config.n_layer)]
+        # transformer
+        self.blocks = [Block() for _ in range(config.n_layer)]
 
-    # decoder head
-    self.ln_f = tf.keras.layers.LayerNormalization()
-    self.head = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
+        # decoder head
+        self.ln_f = tf.keras.layers.LayerNormalization()
+        self.head = tf.keras.layers.Dense(config.vocab_size, use_bias=False)
 
-    self.block_size = config.block_size
+        self.block_size = config.block_size
 
-  def call(self, idx, training=False):
-    """forward the GPT model"""
+    def call(self, idx, training=False):
+        """forward the GPT model"""
 
-    # each index maps to a (learnable) vector
-    token_embeddings = self.tok_emb(idx)
+        # each index maps to a (learnable) vector
+        token_embeddings = self.tok_emb(idx)
 
-    # each position maps to a (learnable) vector
-    if training:
-        position = block_size
-    else:
-        position = tf.shape(token_embeddings)[1]
-    position_embeddings = self.pos_emb[:, :position, :]
+        # each position maps to a (learnable) vector
+        if training:
+            position = block_size
+        else:
+            position = tf.shape(token_embeddings)[1]
+        position_embeddings = self.pos_emb[:, :position, :]
 
-    x = token_embeddings + position_embeddings
-    x = self.drop(x)
+        x = token_embeddings + position_embeddings
+        x = self.drop(x)
 
-    for layer in self.blocks:
-        x = layer(x)
+        for layer in self.blocks:
+            x = layer(x)
 
-    x = self.ln_f(x)
+        x = self.ln_f(x)
 
-    logits = self.head(x) # (batch size, token count, vocab size)
+        logits = self.head(x) # (batch size, token count, vocab size)
 
-    return logits
+        return logits
