@@ -117,7 +117,7 @@ class Trainer:
         callbacks =[PrintLRCallback(), ]
 
         if self.config.lr_decay:
-            callbacks.append(SetEpochCallback(learning_rate)
+            callbacks.append(SetEpochCallback(learning_rate))
 
         use_multiprocessing = True if self.config.num_workers > 1 else False
         self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
