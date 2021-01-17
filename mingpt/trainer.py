@@ -39,15 +39,24 @@ class TrainerConfig:
 
 class CosineSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, learning_rate=6e-4, warmup_steps=20, final_steps=1750,
-                 final_decay=.1):
+                 final_decay=.1, steps_per_epoch=None):
         super(CosineSchedule, self).__init__()
 
         self.learning_rate = learning_rate
         self.warmup_steps = warmup_steps
         self.final_steps = final_steps
         self.final_decay = final_decay
+        self.steps_per_epoch = steps_per_epoch
+
+        self.epoch = 0
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
 
     def __call__(self, step):
+        if self.steps_per_epoch is not None:
+            step += self.epoch * self.steps_per_epoch
+
         less_than = tf.math.less(step, tf.constant(self.warmup_steps,
                                  dtype=tf.float32))
 
@@ -71,6 +80,13 @@ class PrintLRCallback(tf.keras.callbacks.Callback):
         lr = learning_rate(batch)
         print("\nLearning rate:", lr.numpy())
 
+
+class SetEpochCallback(tf.keras.callbacks.Callback):
+    def __init__(self, learning_rate):
+        self.learning_rate = learning_rate
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.learning_rate.set_epoch(epoch)
 
 class Trainer:
 
@@ -98,9 +114,13 @@ class Trainer:
 
         self.model.compile(optimizer, 'sparse_categorical_crossentropy')
 
+        callbacks =[PrintLRCallback(), ]
+
+        if self.config.lr_decay:
+            callbacks.append(SetEpochCallback(learning_rate)
+
         use_multiprocessing = True if self.config.num_workers > 1 else False
         self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
-                       callbacks=[PrintLRCallback()],
-                       validation_data=self.test_dataset,
+                       callbacks=callbacks, validation_data=self.test_dataset,
                        workers=self.config.num_workers,
                        use_multiprocessing=use_multiprocessing)
