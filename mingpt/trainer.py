@@ -118,7 +118,10 @@ class Trainer:
         self.model.compile(optimizer, 'sparse_categorical_crossentropy')
 
         if self.config.lr_decay:
-            callbacks =[PrintLRCallback(), SetEpochCallback(learning_rate)]
+            callbacks =[
+                PrintLRCallback(learning_rate),
+                SetEpochCallback(learning_rate)
+            ]
         else:
             callbacks = None
 
