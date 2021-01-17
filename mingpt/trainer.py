@@ -99,7 +99,7 @@ class Trainer:
         self.test_dataset = test_dataset
         self.config = config
 
-    def train(self):
+    def train(self, print_lr=False):
         if self.config.lr_decay:
             learning_rate = CosineSchedule(
                 self.config.learning_rate,
@@ -118,10 +118,9 @@ class Trainer:
         self.model.compile(optimizer, 'sparse_categorical_crossentropy')
 
         if self.config.lr_decay:
-            callbacks =[
-                PrintLRCallback(learning_rate),
-                SetEpochCallback(learning_rate)
-            ]
+            callbacks =[SetEpochCallback(learning_rate), ]
+            if print_lr:
+                callbacks.append(PrintLRCallback(learning_rate))
         else:
             callbacks = None
 
