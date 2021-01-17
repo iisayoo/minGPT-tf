@@ -76,8 +76,11 @@ class CosineSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
 
 
 class PrintLRCallback(tf.keras.callbacks.Callback):
+    def __init__(self, learning_rate):
+        self.learning_rate = learning_rate
+
     def on_train_batch_begin(self, batch, logs=None):
-        lr = learning_rate(batch)
+        lr = self.learning_rate(batch)
         print("\nLearning rate:", lr.numpy())
 
 
@@ -114,10 +117,10 @@ class Trainer:
 
         self.model.compile(optimizer, 'sparse_categorical_crossentropy')
 
-        callbacks =[PrintLRCallback(), ]
-
         if self.config.lr_decay:
-            callbacks.append(SetEpochCallback(learning_rate))
+            callbacks =[PrintLRCallback(), SetEpochCallback(learning_rate)]
+        else:
+            callbacks = None
 
         use_multiprocessing = True if self.config.num_workers > 1 else False
         self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
