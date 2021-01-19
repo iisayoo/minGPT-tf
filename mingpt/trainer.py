@@ -4,12 +4,10 @@ network, so nothing in this file really has anything to do with GPT
 specifically.
 """
 
-import logging
+from datetime import datetime as dt
 import math
 
 import tensorflow as tf
-
-logger = logging.getLogger(__name__)
 
 
 class TrainerConfig:
@@ -57,13 +55,16 @@ class CosineSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         if self.steps_per_epoch is not None:
             step += self.epoch * self.steps_per_epoch
 
-        less_than = tf.math.less(step, tf.constant(self.warmup_steps,
-                                 dtype=tf.float32))
+        less_than = tf.math.less(
+            tf.cast(step, tf.int64),
+            tf.constant(self.warmup_steps, dtype=tf.int64))
 
-        lr_mult_warmup = tf.divide(step, self.warmup_steps)
+        lr_mult_warmup = tf.divide(
+            tf.cast(step, tf.float32),
+            tf.cast(self.warmup_steps, tf.float32))
 
         progress = (
-            (step - self.warmup_steps)
+            tf.cast(step - self.warmup_steps, tf.float32)
             / float(max(1, self.final_steps - self.warmup_steps))
         )
         lr_mult = tf.maximum(
@@ -92,14 +93,13 @@ class SetEpochCallback(tf.keras.callbacks.Callback):
         self.learning_rate.set_epoch(epoch)
 
 class Trainer:
-
     def __init__(self, model, train_dataset, test_dataset, config):
         self.model = model
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
         self.config = config
 
-    def train(self, print_lr=False):
+    def train(self, print_lr=False, tensorboard=False):
         if self.config.lr_decay:
             learning_rate = CosineSchedule(
                 self.config.learning_rate,
@@ -115,7 +115,12 @@ class Trainer:
             beta_2=self.config.betas[1],
             clipnorm=self.config.grad_norm_clip)
 
-        self.model.compile(optimizer, 'sparse_categorical_crossentropy')
+        loss = tf.keras.losses.SparseCategoricalCrossentropy(
+            from_logits=True,
+            reduction=tf.keras.losses.Reduction.SUM_OVER_BATCH_SIZE
+        )
+
+        self.model.compile(optimizer, loss)
 
         if self.config.lr_decay:
             callbacks =[SetEpochCallback(learning_rate), ]
@@ -123,6 +128,14 @@ class Trainer:
                 callbacks.append(PrintLRCallback(learning_rate))
         else:
             callbacks = None
+
+        if tensorboard:
+            log_dir = "logs/fit_{}/".format(dt.timestamp(math.floor(dt.now())))
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir,
+                                                                  histogram_freq=1)
+            if callbacks is not None:
+                callbacks.append(tensorboard_callback)
+            else: callbacks = [tensorboard_callback, ]
 
         use_multiprocessing = True if self.config.num_workers > 1 else False
         self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
