@@ -130,7 +130,7 @@ class Trainer:
             callbacks = None
 
         if tensorboard:
-            log_dir = "logs/fit_{}/".format(dt.timestamp(math.floor(dt.now())))
+            log_dir = "logs/fit_{}/".format(math.floor(dt.timestamp(dt.now())))
             tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir,
                                                                   histogram_freq=1)
             if callbacks is not None:
