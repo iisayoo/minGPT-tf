@@ -44,7 +44,7 @@ def sample(model, x, steps, temperature=1.0, sample=False, top_k=None):
 
         # sample from the distribution or take the most likely
         if sample:
-            ix = tf.random.categorical(probs, 1)
+            ix = tf.random.categorical(tf.math.log(probs), 1)
         else:
             _, ix = tf.math.top_k(probs, 1)
 
