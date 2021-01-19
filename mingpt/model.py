@@ -7,14 +7,10 @@ GPT model:
 - the final decoder is a linear projection into a vanilla Softmax classifier
 """
 
-import logging
 import math
 
 import numpy as np
 import tensorflow as tf
-
-
-logger = logging.getLogger(__name__)
 
 
 class GPTConfig:
@@ -30,6 +26,10 @@ class GPTConfig:
             setattr(self, k, v)
 
 
+kernel_initializer = tf.keras.initializers.RandomNormal(mean=0.0,
+                                                        stddev=0.02)
+
+
 class CausalSelfAttention(tf.keras.layers.Layer):
     """
     A vanilla multi-head masked self-attention layer with a projection at the
@@ -43,16 +43,24 @@ class CausalSelfAttention(tf.keras.layers.Layer):
         assert config.n_embd % config.n_head == 0
 
         # key, query, value projections for all heads
-        self.key = tf.keras.layers.Dense(config.n_embd)
-        self.query = tf.keras.layers.Dense(config.n_embd)
-        self.value = tf.keras.layers.Dense(config.n_embd)
+        self.key = tf.keras.layers.Dense(
+            config.n_embd,
+            kernel_initializer=kernel_initializer)
+        self.query = tf.keras.layers.Dense(
+            config.n_embd,
+            kernel_initializer=kernel_initializer)
+        self.value = tf.keras.layers.Dense(
+            config.n_embd,
+            kernel_initializer=kernel_initializer)
 
         # regularization
         self.attn_drop = tf.keras.layers.Dropout(config.attn_pdrop)
         self.resid_drop = tf.keras.layers.Dropout(config.resid_pdrop)
 
         # output projection
-        self.proj = tf.keras.layers.Dense(config.n_embd)
+        self.proj = tf.keras.layers.Dense(
+            config.n_embd,
+            kernel_initializer=kernel_initializer)
 
         lower_tri = np.tril(
             np.ones([config.block_size, config.block_size])
@@ -108,19 +116,36 @@ class Block(tf.keras.layers.Layer):
         self.ln1 = tf.keras.layers.LayerNormalization()
         self.ln2 = tf.keras.layers.LayerNormalization()
         self.attn = CausalSelfAttention(config)
-        self.mlp = [
-            tf.keras.layers.Dense(4 * config.n_embd, activation='gelu'),
-            tf.keras.layers.Dense(config.n_embd),
-            tf.keras.layers.Dropout(config.resid_pdrop)
-        ]
+        self.dense_1 = tf.keras.layers.Dense(
+            4 * config.n_embd,
+            kernel_initializer=kernel_initializer,
+            activation='gelu')
+        self.dense_2 = tf.keras.layers.Dense(
+            config.n_embd,
+            kernel_initializer=kernel_initializer,
+            activation='gelu')
+        self.drop = tf.keras.layers.Dropout(config.resid_pdrop)
 
     def call(self, x):
         x1 = x + self.attn(self.ln1(x))
         x2 = self.ln2(x1)
-        for layer in self.mlp:
-            x2 = layer(x2)
-        x2 = x1 + x2
-        return x2
+        x2 = self.dense_1(x2)
+        x2 = self.dense_2(x2)
+        y = x1 + self.drop(x2)
+        return y
+
+
+class PositionalEncoding(tf.keras.layers.Layer):
+    def __init__(self, config):
+        super(PositionalEncoding, self).__init__()
+
+        self.pos_emb = tf.Variable(
+            tf.zeros([1, config.block_size, config.n_embd]),
+            trainable=True)
+
+    def call(self, x):
+        return x + self.pos_emb[:, :tf.shape(x)[1], :]
+
 
 class GPT(tf.keras.Model):
     """  the full GPT language model, with a context size of block_size """
@@ -130,8 +155,7 @@ class GPT(tf.keras.Model):
 
         # input embedding stem
         self.tok_emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
-        self.pos_emb = tf.Variable(tf.zeros([1, config.block_size, config.n_embd]),
-                                   trainable=True)
+        self.pos_emb = PositionalEncoding(config)
         self.drop = tf.keras.layers.Dropout(config.embd_pdrop)
 
         # transformer
@@ -153,13 +177,7 @@ class GPT(tf.keras.Model):
         token_embeddings = self.tok_emb(idx)
 
         # each position maps to a (learnable) vector
-        if training:
-            position = self.block_size
-        else:
-            position = tf.shape(token_embeddings)[1]
-        position_embeddings = self.pos_emb[:, :position, :]
-
-        x = token_embeddings + position_embeddings
+        x = self.pos_emb(token_embeddings)
         x = self.drop(x)
 
         for layer in self.blocks:
