@@ -1,8 +1,10 @@
 """
 GPT model:
-- the initial stem consists of a combination of token encoding and a positional encoding
+- the initial stem consists of a combination of token encoding and a
+positional encoding
 - the meat of it is a uniform sequence of Transformer blocks
-    - each Transformer is a sequential combination of a 1-hidden-layer MLP block and a self-attention block
+    - each Transformer is a sequential combination of a 1-hidden-layer MLP
+    block and a self-attention block
     - all blocks feed into a central residual pathway similar to resnets
 - the final decoder is a linear projection into a vanilla Softmax classifier
 """
@@ -22,7 +24,7 @@ class GPTConfig:
     def __init__(self, vocab_size, block_size, **kwargs):
         self.vocab_size = vocab_size
         self.block_size = block_size
-        for k,v in kwargs.items():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
 
@@ -78,9 +80,9 @@ class CausalSelfAttention(tf.keras.layers.Layer):
 
         # calculate query, key, value for each head.
         # make head the next leading dim.
-        k = tf.reshape(self.key(x),
-                       [B, T, self.n_head, C // self.n_head]) # (B, T, nh, hs)
-        k = tf.transpose(k, [0, 2, 1, 3]) # (B, nh, T, hs)
+        k = tf.reshape(self.key(x),  # (B, T, nh, hs)
+                       [B, T, self.n_head, C // self.n_head])
+        k = tf.transpose(k, [0, 2, 1, 3])  # (B, nh, T, hs)
         q = tf.reshape(self.query(x),
                        [B, T, self.n_head, C // self.n_head])
         q = tf.transpose(q, [0, 2, 1, 3])
@@ -91,7 +93,7 @@ class CausalSelfAttention(tf.keras.layers.Layer):
         # causal self-attention;
         # Self-attend: (B, nh, T, hs) x (B, nh, T, hs) -> (B, nh, T, T)
         att = tf.matmul(q, tf.transpose(k, [0, 1, 3, 2]))
-        att *=  1.0 / math.sqrt(self.n_embd / self.n_head)
+        att *= 1.0 / math.sqrt(self.n_embd / self.n_head)
         att = tf.where(self.mask[:, :, :T, :T] == 0, float('-inf'), att)
 
         # apply softmax.
@@ -154,7 +156,8 @@ class GPT(tf.keras.Model):
         super(GPT, self).__init__()
 
         # input embedding stem
-        self.tok_emb = tf.keras.layers.Embedding(config.vocab_size, config.n_embd)
+        self.tok_emb = tf.keras.layers.Embedding(config.vocab_size,
+                                                 config.n_embd)
         self.pos_emb = PositionalEncoding(config)
         self.drop = tf.keras.layers.Dropout(config.embd_pdrop)
 
@@ -185,6 +188,6 @@ class GPT(tf.keras.Model):
 
         x = self.ln_f(x)
 
-        logits = self.head(x) # (batch size, token count, vocab size)
+        logits = self.head(x)  # (batch size, token count, vocab size)
 
         return logits

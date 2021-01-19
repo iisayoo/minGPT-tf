@@ -92,6 +92,7 @@ class SetEpochCallback(tf.keras.callbacks.Callback):
     def on_epoch_begin(self, epoch, logs=None):
         self.learning_rate.set_epoch(epoch)
 
+
 class Trainer:
     def __init__(self, model, train_dataset, test_dataset, config):
         self.model = model
@@ -123,7 +124,7 @@ class Trainer:
         self.model.compile(optimizer, loss)
 
         if self.config.lr_decay:
-            callbacks =[SetEpochCallback(learning_rate), ]
+            callbacks = [SetEpochCallback(learning_rate), ]
             if print_lr:
                 callbacks.append(PrintLRCallback(learning_rate))
         else:
@@ -131,11 +132,13 @@ class Trainer:
 
         if tensorboard:
             log_dir = "logs/fit_{}/".format(math.floor(dt.timestamp(dt.now())))
-            tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir,
-                                                                  histogram_freq=1)
+            tensorboard_callback = tf.keras.callbacks.TensorBoard(
+                log_dir=log_dir,
+                histogram_freq=1)
             if callbacks is not None:
                 callbacks.append(tensorboard_callback)
-            else: callbacks = [tensorboard_callback, ]
+            else:
+                callbacks = [tensorboard_callback, ]
 
         use_multiprocessing = True if self.config.num_workers > 1 else False
         self.model.fit(self.train_dataset, epochs=self.config.max_epochs,
